@@ -1,0 +1,280 @@
+<!-- SIGN UP -->
+<style>
+    
+    * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", sans-serif;
+}
+
+body {
+  height: 100vh;
+  background: linear-gradient(135deg, #2b124c, #7b3fe4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-container {
+  width: 420px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  animation: fadeIn 1s ease;
+}
+
+.form-box {
+  padding: 40px;
+}
+
+.form {
+  display: none;
+  animation: slideUp 0.6s ease;
+}
+
+.form.active {
+  display: block;
+}
+
+h2 {
+  color: #2b124c;
+  margin-bottom: 15px;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+input:focus {
+  border-color: #7b3fe4;
+  outline: none;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #2b124c, #7b3fe4);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(123,63,228,0.4);
+}
+
+.google-btn {
+  background: white;
+  color: #444;
+  border: 1px solid #ddd;
+}
+
+.google-btn:hover {
+  background: #f4f0ff;
+}
+
+.divider {
+  text-align: center;
+  margin: 15px 0;
+  font-size: 13px;
+  color: #777;
+}
+
+.toggle {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.toggle a {
+  color: #7b3fe4;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.link {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  margin: 6px 0 15px;
+  color: #7b3fe4;
+  cursor: pointer;
+}
+
+.checkbox {
+  font-size: 13px;
+  margin-bottom: 15px;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(25px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+</style>
+<form id="signupForm" class="form">
+    <h2>Create Account</h2>
+
+    <input type="text" id="firstName" placeholder="First Name" required>
+    <input type="text" id="lastName" placeholder="Last Name" required>
+    <input type="email" id="signupEmail" placeholder="Email" required>
+    <input type="tel" id="phone" placeholder="+1 213 218 5486" required>
+
+    <input type="password" id="signupPassword" placeholder="Password" required>
+    <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+
+    <input type="password" id="pin" placeholder="6 Digit Pincode" maxlength="6" required>
+
+    <label class="checkbox">
+      <input type="checkbox" id="terms" required>
+      I agree to the terms and conditions
+    </label>
+
+    <button type="submit">Create Account</button>
+
+    <p class="toggle">
+      Already have an account?
+      <a onclick="showLogin()">Sign In</a>
+      
+    </p>
+  </form>
+
+</div>
+</div>
+
+    <script type="module">
+/* ================= FIREBASE IMPORTS ================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+/* 🔥 FIREBASE CONFIG */
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyB_ssiJh411JD3uX6SXwBTT3wIT5nZ6iOk",
+  authDomain: "truemark-bank.firebaseapp.com",
+  projectId: "truemark-bank",
+  storageBucket: "truemark-bank.firebasestorage.app",
+  messagingSenderId: "135459481471",
+  appId: "1:135459481471:web:21b487301aaac729eddc4a",
+  measurementId: "G-S2EHW9XHWJ"
+};
+
+/* 🔥 INIT */
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* ================= DOM ================= */
+const signupForm = document.getElementById("signupForm");
+const loginForm = document.getElementById("loginForm");
+
+const firstName = document.getElementById("firstName");
+const lastName = document.getElementById("lastName");
+const signupEmail = document.getElementById("signupEmail");
+const phone = document.getElementById("phone");
+const signupPassword = document.getElementById("signupPassword");
+const confirmPassword = document.getElementById("confirmPassword");
+const pin = document.getElementById("pin");
+
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
+
+/* ================= SIGN UP ================= */
+signupForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  if (signupPassword.value !== confirmPassword.value) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  try {
+    const userCred = await createUserWithEmailAndPassword(
+      auth,
+      signupEmail.value,
+      signupPassword.value
+    );
+
+    await setDoc(doc(db, "users", userCred.user.uid), {
+      firstName: firstName.value,
+      lastName: lastName.value,
+      email: signupEmail.value,
+      phone: phone.value,
+      pin: pin.value,
+      createdAt: new Date()
+    });
+
+    alert("Account created successfully 🎉");
+    signupForm.reset();
+
+  } catch (error) {
+    alert(error.message);
+    console.error(error);
+  }
+});
+
+/* ================= LOGIN ================= */
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await signInWithEmailAndPassword(
+      auth,
+      loginEmail.value,
+      loginPassword.value
+    );
+    alert("Login successful ✅");
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+/* ================= PASSWORD RESET ================= */
+window.resetPassword = async () => {
+  if (!loginEmail.value) {
+    alert("Enter your email first");
+    return;
+  }
+  await sendPasswordResetEmail(auth, loginEmail.value);
+  alert("Password reset email sent 📩");
+};
+
+/* ================= GOOGLE LOGIN ================= */
+window.googleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      alert(`Hello ${result.user.displayName}, you are signed in!`);
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+  };
+
+console.log("🔥 Firebase fully connected");
+</script>
+

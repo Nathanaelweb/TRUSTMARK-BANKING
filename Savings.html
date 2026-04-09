@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Transfer Dashboard</title>
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #f3f0f8, #e9d5ff);
+    margin: 0;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    color: #5b21b6;
+    margin-bottom: 30px;
+  }
+  .dashboard, .transfer {
+    max-width: 500px;
+    margin: 0 auto 30px auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 6px 15px rgba(91, 33, 182, 0.2);
+    transition: transform 0.3s;
+  }
+  .dashboard:hover, .transfer:hover {
+    transform: translateY(-3px);
+  }
+  .balance {
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    padding: 10px 0;
+    border-bottom: 1px solid #ddd;
+  }
+  input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+  button {
+    width: 100%;
+    padding: 10px;
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s, transform 0.2s;
+  }
+  button:hover {
+    background: #9333ea;
+    transform: scale(1.05);
+  }
+  .message {
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
+  }
+</style>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<h1>Account Dashboard</h1>
+
+<div class="dashboard">
+  <div class="balance">
+    <span>Main Account:</span>
+    <span id="mainBalance">$0.00</span>
+  </div>
+  <div class="balance">
+    <span>Savings Account:</span>
+    <span id="savingsBalance">$0.00</span>
+  </div>
+</div>
+
+<div class="transfer">
+  <h2>Transfer to Savings</h2>
+  <input type="number" id="toSavingsAmount" placeholder="Enter amount to transfer">
+  <button onclick="transferToSavings()">Transfer to Savings</button>
+  <div class="message" id="messageSavings"></div>
+</div>
+
+<div class="transfer">
+  <h2>Transfer to Main Account</h2>
+  <input type="number" id="toMainAmount" placeholder="Enter amount to transfer">
+  <button onclick="transferToMain()">Transfer to Main</button>
+  <div class="message" id="messageMain"></div>
+</div>
+
+<script>
+  // ===== FIREBASE CONFIG =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_ssiJh411JD3uX6SXwBTT3wIT5nZ6iOk",
+    authDomain: "truemark-bank.firebaseapp.com",
+    projectId: "truemark-bank",
+    storageBucket: "truemark-bank.firebasestorage.app",
+    messagingSenderId: "135459481471",
+    appId: "1:135459481471:web:21b487301aaac729eddc4a",
+    measurementId: "G-S2EHW9XHWJ"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  let userRef;
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      window.location.replace("signin.html");
+      return;
+    }
+
+    userRef = db.collection("users").doc(user.uid);
+
+    // Real-time listener for balances
+    userRef.onSnapshot((doc) => {
+      const data = doc.data();
+      if (!data) return;
+      const balances = data.balances || { current: 0, savings: 0 };
+      document.getElementById('mainBalance').textContent = `$${balances.current.toLocaleString()}`;
+      document.getElementById('savingsBalance').textContent = `$${balances.savings.toLocaleString()}`;
+    });
+  });
+
+  async function transferToSavings() {
+    const amount = parseFloat(document.getElementById('toSavingsAmount').value);
+    const messageEl = document.getElementById('messageSavings');
+
+    if (!userRef) return;
+    const docSnap = await userRef.get();
+    const balances = docSnap.data().balances || { current: 0, savings: 0 };
+
+    if (isNaN(amount) || amount <= 0) {
+      messageEl.textContent = "Enter a valid amount.";
+      messageEl.style.color = "red";
+      return;
+    }
+    if (amount > balances.current) {
+      messageEl.textContent = "Insufficient funds in Main Account.";
+      messageEl.style.color = "red";
+      return;
+    }
+
+    // Update Firestore balances
+    await userRef.update({
+      "balances.current": balances.current - amount,
+      "balances.savings": balances.savings + amount
+    });
+
+    // Record transaction
+    await db.collection("transactions").add({
+      uid: auth.currentUser.uid,
+      type: "Transfer to Savings",
+      amount: amount,
+      status: "Completed",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    messageEl.textContent = `Transferred $${amount.toFixed(2)} to Savings!`;
+    messageEl.style.color = "#5b21b6";
+    document.getElementById('toSavingsAmount').value = "";
+  }
+
+  async function transferToMain() {
+    const amount = parseFloat(document.getElementById('toMainAmount').value);
+    const messageEl = document.getElementById('messageMain');
+
+    if (!userRef) return;
+    const docSnap = await userRef.get();
+    const balances = docSnap.data().balances || { current: 0, savings: 0 };
+
+    if (isNaN(amount) || amount <= 0) {
+      messageEl.textContent = "Enter a valid amount.";
+      messageEl.style.color = "red";
+      return;
+    }
+    if (amount > balances.savings) {
+      messageEl.textContent = "Insufficient funds in Savings Account.";
+      messageEl.style.color = "red";
+      return;
+    }
+
+    // Update Firestore balances
+    await userRef.update({
+      "balances.current": balances.current + amount,
+      "balances.savings": balances.savings - amount
+    });
+
+    // Record transaction
+    await db.collection("transactions").add({
+      uid: auth.currentUser.uid,
+      type: "Transfer to Main Account",
+      amount: amount,
+      status: "Completed",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    messageEl.textContent = `Transferred $${amount.toFixed(2)} to Main Account!`;
+    messageEl.style.color = "#5b21b6";
+    document.getElementById('toMainAmount').value = "";
+  }
+</script>
+
+</body>
+</html>

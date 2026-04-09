@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - Transfer Funds</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    /* ===== BODY & CONTAINER ===== */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f7f5ff;
+      color: #3a0ca3;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: white;
+      padding: 40px 30px;
+      border-radius: 15px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+      width: 400px;
+      text-align: center;
+      animation: fadeIn 1s ease-out;
+    }
+
+    h2 {
+      color: #6a0dad;
+      margin-bottom: 25px;
+      animation: slideDown 1s ease-out;
+    }
+
+    /* ===== INPUTS ===== */
+    input {
+      width: 100%;
+      padding: 12px 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 2px solid #d3cce3;
+      outline: none;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      border-color: #6a0dad;
+      box-shadow: 0 0 8px rgba(106, 13, 173, 0.3);
+    }
+
+    /* ===== BUTTON ===== */
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #6a0dad;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: all 0.3s ease;
+      box-shadow: 0 5px 15px rgba(106, 13, 173, 0.3);
+    }
+
+    button:hover {
+      background: #7f1ce0;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(106, 13, 173, 0.4);
+    }
+
+    /* ===== MESSAGES ===== */
+    #message {
+      color: #3a0ca3;
+      font-weight: bold;
+      margin-top: 20px;
+      opacity: 0;
+      animation: fadeMessage 1s forwards;
+    }
+
+    #error {
+      color: #d00000;
+      font-weight: bold;
+      margin-top: 20px;
+      opacity: 0;
+      animation: fadeMessage 1s forwards;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-50px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeMessage {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #16a34a; /* green */
+  color: white;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.4s ease;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.error {
+  background: #dc2626; /* red */
+}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Admin - Transfer Funds</h2>
+    
+    <input type="text" id="accountNumber" placeholder="Recipient Account Number">
+    <input type="number" id="amount" placeholder="Amount ($)">
+    <input type="text" id="description" placeholder="Description (Optional)">
+    
+    <button id="transferBtn">Transfer</button>
+    
+    <div id="message"></div>
+    <div id="error"></div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      limit,
+      getDocs,
+      updateDoc,
+      addDoc,
+      doc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+  
+    /* 🔥 FIREBASE CONFIG */
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_ssiJh411JD3uX6SXwBTT3wIT5nZ6iOk",
+      authDomain: "truemark-bank.firebaseapp.com",
+      projectId: "truemark-bank",
+    };
+  
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+  
+    const ADMIN_UID = "LgUzwFasaCPfhFf2jISVWVhfqKr2";
+  
+    /* 🔐 AUTH GUARD */
+    onAuthStateChanged(auth, user => {
+      console.log("LOGGED IN UID:", user?.uid);
+  
+      if (!user || user.uid !== ADMIN_UID) {
+        alert("Access denied: Admin only");
+        window.location.href = "signin.html";
+      }
+    });
+  
+    /* 💸 TRANSFER */
+    document.getElementById("transferBtn").addEventListener("click", async () => {
+      try {
+        const accountNumber = document.getElementById("accountNumber").value.trim();
+        const amount = Number(document.getElementById("amount").value);
+  
+        if (!accountNumber || amount <= 0) {
+          throw new Error("Enter valid account number and amount");
+        }
+  
+        const q = query(
+          collection(db, "users"),
+          where("accountNumber", "==", accountNumber),
+          limit(1)
+        );
+  
+        const snap = await getDocs(q);
+        if (snap.empty) throw new Error("Account not found");
+  
+        const userDoc = snap.docs[0];
+        const userData = userDoc.data();
+  
+        const newBalance = (userData.balances?.current || 0) + amount;
+  
+        // ✅ UPDATE BALANCE
+        await updateDoc(doc(db, "users", userDoc.id), {
+          "balances.current": newBalance
+        });
+  
+        // ✅ ADD TRANSACTION
+        await addDoc(collection(db, "transactions"), {
+          uid: userDoc.id,               // 🔑 MUST be the user UID
+          type: "Deposit",
+          amount: amount,
+          status: "completed",
+          description: "Admin transfer",
+          createdAt: serverTimestamp()
+        });
+  
+        showToast("Transfer successful");
+  
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Transfer failed", "error");
+      }
+    });
+  
+    /* 🍞 TOAST MESSAGE */
+    function showToast(message, type = "success") {
+      const toast = document.createElement("div");
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+  
+      document.body.appendChild(toast);
+  
+      setTimeout(() => toast.classList.add("show"), 10);
+  
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+  
+  
+</body>
+</html>

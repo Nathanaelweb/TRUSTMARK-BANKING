@@ -1,0 +1,17 @@
+<div class="menu-group">
+        <span class="menu-item">Credit Card</span>
+        <div class="submenu">
+          <a href="New Cards.html">New Cards</a>
+        </div>
+      </div>
+
+      <a href="#" class="menu-item">Savings</a>
+  
+      <!-- Loans -->
+      <div class="menu-group">
+        <span class="menu-item">Loans</span>
+        <div class="submenu">
+          <a href="New Loan.html">New Loan</a>
+          <a href="My Loan.html">My Loan</a>
+        </div>
+      </div>

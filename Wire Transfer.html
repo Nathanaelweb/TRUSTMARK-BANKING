@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wire Transfer</title>
+
+<!-- ===== STYLES ===== -->
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
+    margin: 0;
+    padding: 0 10px;
+  }
+
+  h1 {
+    text-align: center;
+    color: #4338ca;
+    margin: 20px 0;
+  }
+
+  .container {
+    max-width: 500px;
+    margin: 20px auto;
+    background: #fff;
+    padding: 25px 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  }
+
+  input, select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    outline: none;
+  }
+
+  input:focus, select:focus {
+    border-color: #4338ca;
+  }
+
+  button {
+    width: 100%;
+    padding: 13px;
+    background: #5b21b6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+
+  button:hover {
+    background: #7c3aed;
+  }
+
+  .success {
+    background: #e6fffa;
+    color: #065f46;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  .error {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  @media(max-width: 480px) {
+    .container {
+      width: 94%;
+      padding: 20px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>Wire Transfer ($500,000+)</h1>
+
+<div class="container">
+  <h2>New Transfer</h2>
+  <form id="wireForm">
+    <input type="number" id="amount" placeholder="Amount (≥ 500,000)" min="500000" required>
+    <input type="text" id="receiverName" placeholder="Receiver Name" required>
+    <input type="text" id="bankName" placeholder="Bank Name" required>
+    <input type="text" id="accountNumber" placeholder="Account Number" required>
+    <button type="submit">Submit Transfer</button>
+  </form>
+
+  <div id="message"></div>
+</div>
+
+<!-- ===== FIREBASE ===== -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+    import { getFirestore, doc, collection, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+    
+    // ===== Firebase Config =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_ssiJh411JD3uX6SXwBTT3wIT5nZ6iOk",
+      authDomain: "truemark-bank.firebaseapp.com",
+      projectId: "truemark-bank",
+      storageBucket: "truemark-bank.firebasestorage.app",
+      messagingSenderId: "135459481471",
+      appId: "1:135459481471:web:21b487301aaac729eddc4a",
+      measurementId: "G-S2EHW9XHWJ"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    // ===== Elements =====
+    const wireForm = document.getElementById("wireForm");
+    const messageDiv = document.getElementById("message");
+    
+    // ===== Auth Listener =====
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.replace("signin.html");
+        return;
+      }
+    
+      wireForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        messageDiv.innerHTML = "";
+    
+        const amount = Number(document.getElementById("amount").value);
+        const receiverName = document.getElementById("receiverName").value.trim();
+        const bankName = document.getElementById("bankName").value.trim();
+        const accountNumber = document.getElementById("accountNumber").value.trim();
+    
+        // ===== Validation =====
+        if (isNaN(amount) || amount < 500000) {
+          messageDiv.innerHTML = `<div class="error">Amount must be at least 500,000</div>`;
+          return;
+        }
+    
+        const userRef = doc(db, "users", user.uid);
+    
+        try {
+          await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) throw "User not found";
+    
+            // Ensure balance is numeric
+            let currentBalance = Number(userDoc.data().Current || 0);
+            console.log("Current balance:", currentBalance, "Transfer amount:", amount);
+    
+            if (currentBalance < amount) throw "Insufficient balance";
+    
+            // Deduct balance
+            transaction.update(userRef, {
+              balance: currentBalance - amount
+            });
+    
+            // Add transaction record
+            const txnRef = collection(db, "transactions");
+            transaction.set(doc(txnRef), {
+              uid: user.uid,
+              amount,
+              receiverName,
+              bankName,
+              accountNumber,
+              type: "Wire Transfer",
+              status: "Successful",
+              createdAt: serverTimestamp(),
+              receiptNumber: `WT-${Date.now()}`
+            });
+          });
+    
+          messageDiv.innerHTML = `<div class="success">Transfer completed and balance updated!</div>`;
+          wireForm.reset();
+        } catch (err) {
+          console.error(err);
+          
+        }
+      });
+    });
+    </script>
+    
+      
+    </script>
+    
+</body>
+</html>

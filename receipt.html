@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transaction Receipts</title>
+<style>
+/* ===== BODY & GLOBAL ===== *//* ===== BODY & HEADER ===== */
+body {
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 20px;
+  background: linear-gradient(135deg, white, rgba(211, 28, 247, 0.2));
+  color: #333;
+  transition: background 0.5s ease-in-out;
+  animation: backgroundShift 10s infinite alternate;
+}
+
+@keyframes backgroundShift {
+  0% { background: linear-gradient(135deg, white, rgba(211, 28, 247, 0.2)); }
+  50% { background: linear-gradient(135deg, rgba(230, 230, 255, 0.5), rgba(211, 28, 247, 0.3)); }
+  100% { background: linear-gradient(135deg, white, rgba(211, 28, 247, 0.2)); }
+}
+
+h1 {
+  background-color: #5b21b6;
+  color: white;
+  padding: 8px 10px;
+  text-align: center;
+  border-radius: 25px;
+  box-shadow: 0 4px 15px rgba(91, 33, 182, 0.4);
+  animation: pulse 2s infinite alternate;
+  font-size: 25px;
+
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 4px 15px rgba(91, 33, 182, 0.4); transform: scale(1); }
+  50% { box-shadow: 0 6px 25px rgba(91, 33, 182, 0.6); transform: scale(1.02); }
+  100% { box-shadow: 0 4px 15px rgba(91, 33, 182, 0.4); transform: scale(1); }
+}
+
+/* ===== RECEIPT TABLE ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+table:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(91, 33, 182, 0.2);
+}
+
+th, td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  transition: background 0.3s, color 0.3s;
+}
+
+th {
+  background-color: #5b21b6;
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  animation: headerSlide 1s ease forwards;
+}
+
+@keyframes headerSlide {
+  0% { transform: translateY(-20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+tr.compact-row {
+  cursor: pointer;
+  background: #fff;
+  transition: background 0.3s, transform 0.3s;
+  position: relative;
+}
+
+tr.compact-row:hover {
+  background: #f3e8ff;
+  transform: translateX(3px) scale(1.01);
+}
+
+tr.expanded-row {
+  display: none;
+  background: #f9f6ff;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.expanded-row td {
+  padding: 12px;
+  font-size: 13px;
+  color: #4b3db0;
+  line-height: 1.5;
+  white-space: normal;
+  word-break: break-word;
+  transition: color 0.3s, transform 0.3s;
+}
+
+/* Fade in animation for rows */
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(-5px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile stacked view */
+@media (max-width: 768px) {
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
+
+  tr { margin-bottom: 12px; border-radius: 10px; overflow: hidden; }
+  td {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    transition: background 0.3s;
+  }
+
+  td:before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #5b21b6;
+    flex-basis: 35%;
+    animation: labelSlide 0.5s ease;
+  }
+}
+
+@keyframes labelSlide {
+  0% { transform: translateX(-20px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* ===== BUTTON ===== */
+button.pdf-btn {
+  padding: 8px 16px;
+  border: none;
+  background: #7c3aed;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 12px;
+  font-weight: bold;
+  transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+}
+
+button.pdf-btn:hover {
+  background: #9333ea;
+  transform: scale(1.08) rotate(-1deg);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+
+/* ===== NO DATA ===== */
+.no-data {
+  text-align: center;
+  font-style: italic;
+  padding: 20px;
+  color: #555;
+}
+</style>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<h1>Transaction Receipts</h1>
+<table>
+  <thead>
+    <tr>
+      <th>Transaction</th>
+      <th>Amount</th>
+    </tr>
+  </thead>
+  <tbody id="transactionsBody">
+    <tr><td colspan="2" class="no-data">Loading...</td></tr>
+  </tbody>
+</table>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+import { getFirestore, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyB_ssiJh411JD3uX6SXwBTT3wIT5nZ6iOk",
+  authDomain: "truemark-bank.firebaseapp.com",
+  projectId: "truemark-bank",
+  storageBucket: "truemark-bank.firebasestorage.app",
+  messagingSenderId: "135459481471",
+  appId: "1:135459481471:web:21b487301aaac729eddc4a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+// ===== PDF Download with Logo, Bold Purple Labels & Smaller Font =====
+window.downloadPDF = async function(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  let date = data.createdAt?.toDate?.().toLocaleString() || new Date().toLocaleString();
+
+  // ===== Load Logo =====
+  const logo = new Image();
+  logo.src = "tustmarkbank.png";
+  await new Promise(resolve => { logo.onload = resolve; });
+
+  // ===== Header Background =====
+  doc.setFillColor(91, 33, 182); // deep purple
+  doc.rect(0, 0, doc.internal.pageSize.getWidth(), 40, "F");
+
+  // ===== Logo on Header with White Background =====
+  const logoWidth = 30, logoHeight = 30, logoX = 15, logoY = 5;
+  doc.setFillColor(255, 255, 255); // white
+  doc.rect(logoX - 2, logoY - 2, logoWidth + 4, logoHeight + 4, "F"); // white box behind logo
+  doc.addImage(logo, "PNG", logoX, logoY, logoWidth, logoHeight);
+
+  // ===== Bank Name =====
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18); // smaller than before
+  doc.setTextColor(255, 255, 255);
+  doc.text("TRUSTMARK BANK", doc.internal.pageSize.getWidth() / 2, 25, null, null, "center");
+
+  // ===== Box for Receipt Info =====
+  doc.setDrawColor(91, 33, 182);
+  doc.setLineWidth(0.5);
+  doc.rect(15, 45, doc.internal.pageSize.getWidth() - 30, 90); // main info box
+
+  let y = 52; // start a little higher
+  const lineHeight = 8; // smaller spacing
+  const labelWidth = 35; // width reserved for labels
+  const fontSize = 10; // reduced font size
+
+  doc.setFontSize(fontSize);
+
+  // Helper function to print label in bold purple and value normal black
+  const printLine = (label, value) => {
+    // Label in purple bold
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(91, 33, 182); // deep purple
+    doc.text(`${label}:`, 20, y);
+
+    // Value in black normal
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${value}`, 20 + labelWidth, y);
+    y += lineHeight;
+  }
+
+  printLine("Receipt No", data.receiptNumber || "-");
+  printLine("Type", data.type || "-");
+  printLine("Amount", `$${Number(data.amount || 0).toLocaleString()}`);
+  printLine("Receiver", data.receiverName || "-");
+  printLine("Bank", data.bankName || "-");
+  printLine("Account", data.accountNumber || "-");
+  printLine("Status", data.status || "-");
+  printLine("Date & Time", date);
+
+  // ===== Footer =====
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(91, 33, 182);
+  doc.text("Thank you for using TRUSTMARK BANK", doc.internal.pageSize.getWidth() / 2, pageHeight - 25, null, null, "center");
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text("For inquiries: trustmarkbanking@gmail.com", doc.internal.pageSize.getWidth() / 2, pageHeight - 15, null, null, "center");
+
+  // ===== Save PDF =====
+  doc.save(`${data.receiptNumber || "receipt"}.pdf`);
+};
+
+// ===== Load Transactions =====
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { window.location.replace("signin.html"); return; }
+
+  const transactionsBody = document.getElementById("transactionsBody");
+  transactionsBody.innerHTML = "<tr><td colspan='2' class='no-data'>Loading transactions...</td></tr>";
+
+  try {
+    const q = query(
+      collection(db, "transactions"),
+      where("uid", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      transactionsBody.innerHTML = "<tr><td colspan='2' class='no-data'>No transactions yet</td></tr>";
+      return;
+    }
+
+    transactionsBody.innerHTML = "";
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const date = data.createdAt?.toDate?.().toLocaleString() || "N/A";
+      const rowId = `tx-${data.receiptNumber || Math.random()}`;
+
+      // Compact Row
+      transactionsBody.innerHTML += `
+        <tr class="compact-row" data-target="${rowId}">
+          <td data-label="Transaction">${data.type || "-"}</td>
+          <td data-label="Amount">$${Number(data.amount || 0).toLocaleString()}</td>
+        </tr>
+        <tr class="expanded-row" id="${rowId}">
+  <td colspan="2">
+
+    <button class="pdf-btn" onclick='downloadPDF(${JSON.stringify(data)})'>Download PDF</button>
+  </td>
+</tr>
+      `;
+    });
+
+    // Toggle expanded rows
+    document.querySelectorAll(".compact-row").forEach(row => {
+      row.addEventListener("click", () => {
+        const targetId = row.dataset.target;
+        const expandedRow = document.getElementById(targetId);
+        expandedRow.style.display = expandedRow.style.display === "table-row" ? "none" : "table-row";
+
+        // Close other expanded rows
+        document.querySelectorAll(".expanded-row").forEach(er => {
+          if (er.id !== targetId) er.style.display = "none";
+        });
+      });
+    });
+
+  } catch (error) {
+    console.error("Error loading transactions:", error);
+    transactionsBody.innerHTML = "<tr><td colspan='2' class='no-data'>Failed to load transactions</td></tr>";
+  }
+});
+</script>
+
+</body>
+</html>

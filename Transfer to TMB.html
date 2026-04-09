@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TMB Local Transfer</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
+  margin: 0;
+  padding: 0 10px;
+}
+
+h1 {
+  text-align: center;
+  color: #4338ca;
+  margin: 20px 0;
+}
+
+.container {
+  max-width: 500px;
+  margin: 20px auto;
+  background: #fff;
+  padding: 25px 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
+button {
+  width: 100%;
+  padding: 13px;
+  background: #5b21b6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #7c3aed;
+}
+
+.success {
+  background: #e6fffa;
+  color: #065f46;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<h1>TMB Local Transfer</h1>
+
+<div class="container">
+  <h2>Send to Trustmark Account</h2>
+
+  <form id="tmbForm">
+    <input type="number" id="amount" placeholder="Amount" required>
+    <input type="text" id="receiverAccount" placeholder="Receiver Account Number" required>
+    <input type="text" id="receiverName" placeholder="Receiver Name" required>
+
+    <button type="submit">Send Money</button>
+  </form>
+
+  <div id="message"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+    import { getFirestore, doc, collection, serverTimestamp, runTransaction, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+    
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_ssiJh411JD3uX6SXwBTT3wIT5nZ6iOk",
+      authDomain: "truemark-bank.firebaseapp.com",
+      projectId: "truemark-bank",
+      storageBucket: "truemark-bank.firebasestorage.app",
+      messagingSenderId: "135459481471",
+      appId: "1:135459481471:web:21b487301aaac729eddc4a"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    const form = document.getElementById("tmbForm");
+    const messageDiv = document.getElementById("message");
+    
+    onAuthStateChanged(auth, (user) => {
+    
+      if (!user) {
+        window.location.replace("signin.html");
+        return;
+      }
+    
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        messageDiv.innerHTML = "";
+    
+        const amount = Number(document.getElementById("amount").value);
+        const receiverAccount = document.getElementById("receiverAccount").value.trim();
+        const receiverName = document.getElementById("receiverName").value.trim();
+    
+        if (!amount || amount <= 0) {
+          messageDiv.innerHTML = `<div class="error">Enter valid amount</div>`;
+          return;
+        }
+    
+        try {
+    
+          // 🔍 Find receiver
+          const q = query(
+            collection(db, "users"),
+            where("accountNumber", "==", receiverAccount)
+          );
+    
+          const querySnapshot = await getDocs(q);
+    
+          if (querySnapshot.empty) {
+            messageDiv.innerHTML = `<div class="error">Receiver not found</div>`;
+            return;
+          }
+    
+          const receiverDoc = querySnapshot.docs[0];
+          const receiverRef = doc(db, "users", receiverDoc.id);
+          const senderRef = doc(db, "users", user.uid);
+    
+          // 🔁 Transaction
+          await runTransaction(db, async (transaction) => {
+    
+            const senderSnap = await transaction.get(senderRef);
+            const receiverSnap = await transaction.get(receiverRef);
+    
+            if (!senderSnap.exists()) throw "Sender not found";
+            if (!receiverSnap.exists()) throw "Receiver not found";
+    
+            // ✅ FIXED BALANCE READING
+            let senderBalance = Number(senderSnap.data().balances?.current || 0);
+            let receiverBalance = Number(receiverSnap.data().balances?.current || 0);
+    
+            if (senderBalance < amount) throw "Insufficient balance";
+    
+            // ✅ NEW BALANCES
+            const newSenderBalance = senderBalance - amount;
+            const newReceiverBalance = receiverBalance + amount;
+    
+            // ✅ UPDATE SENDER (SYNC BOTH FIELDS)
+            transaction.update(senderRef, {
+              balance: newSenderBalance,
+              "balances.current": newSenderBalance
+            });
+    
+            // ✅ UPDATE RECEIVER (SYNC BOTH FIELDS)
+            transaction.update(receiverRef, {
+              balance: newReceiverBalance,
+              "balances.current": newReceiverBalance
+            });
+    
+            // ✅ SAVE TRANSACTION
+            const txnRef = collection(db, "transactions");
+    
+            transaction.set(doc(txnRef), {
+              uid: user.uid,
+              amount,
+              receiverName,
+              receiverAccount,
+              bankName: "Trustmark Bank",
+              type: "TMB Transfer",
+              status: "Successful",
+              createdAt: serverTimestamp(),
+              receiptNumber: `TMB-${Date.now()}`
+            });
+    
+          });
+    
+          messageDiv.innerHTML = `<div class="success">Transfer Successful ✅</div>`;
+          form.reset();
+    
+        } catch (err) {
+          console.error(err);
+          messageDiv.innerHTML = `<div class="error">${err}</div>`;
+        }
+    
+      });
+    
+    });
+    </script>
+</script>
+
+</body>
+</html>

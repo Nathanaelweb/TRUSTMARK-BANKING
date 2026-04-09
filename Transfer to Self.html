@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>User Profile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+}
+
+.container {
+  max-width: 500px;
+  margin: 60px auto;
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 15px 25px rgba(113, 2, 165, 0.712);
+  text-align: center;
+  border: 1px solid rebeccapurple;
+}
+
+h2 {
+  margin-bottom: 20px;
+  color: #4338ca;
+}
+p {
+    color: red;
+    font-style: italic;
+}
+.info {
+  font-size: 16px;
+  margin: 12px 0;
+}
+
+.label {
+  font-weight: bold;
+  color: #6b7280;
+}
+
+.value {
+  display: block;
+  font-size: 18px;
+  margin-top: 4px;
+}
+
+.bank {
+  margin-top: 20px;
+  padding: 12px;
+  background: #eef2ff;
+  border-radius: 10px;
+  font-weight: bold;
+  color: #312e81;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>User Profile</h2>
+  <p>Use the below information to make a deposit into your account</p>
+
+  <div class="info">
+    <span class="label">Username</span>
+    <span class="value" id="username">Loading...</span>
+  </div>
+
+  <div class="info">
+    <span class="label">Account Number</span>
+    <span class="value" id="accountNumber">Loading...</span>
+  </div>
+
+  <div class="bank">
+    Bank: Trustmark Bank
+  </div>
+</div>
+
+<script>
+// Firebase Config (same as your dashboard)
+const firebaseConfig = {
+  apiKey: "AIzaSyB_ssiJh411JD3uX6SXwBTT3wIT5nZ6iOk",
+  authDomain: "truemark-bank.firebaseapp.com",
+  projectId: "truemark-bank",
+  storageBucket: "truemark-bank.firebasestorage.app",
+  messagingSenderId: "135459481471",
+  appId: "1:135459481471:web:21b487301aaac729eddc4a"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Load user data
+auth.onAuthStateChanged(async (user) => {
+
+  if (!user) {
+    window.location.replace("signin.html");
+    return;
+  }
+
+  const username = user.email ? user.email.split("@")[0] : "User";
+  document.getElementById("username").innerText = username;
+
+  try {
+    const doc = await db.collection("users").doc(user.uid).get();
+
+    if (doc.exists) {
+      const data = doc.data();
+
+      document.getElementById("accountNumber").innerText =
+        data.accountNumber || "XXXX";
+    }
+
+  } catch (error) {
+    console.error(error);
+  }
+});
+</script>
+
+</body>
+</html>

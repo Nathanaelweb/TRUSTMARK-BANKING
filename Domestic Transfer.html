@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domestic Transfer</title>
+
+<style>
+/* ===== PAGE BASE ===== */
+body{
+  font-family: Arial, sans-serif;
+  background:#f4f6f9;
+  margin:0;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  width: 64px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 18px 10px;
+  background: transparent;
+  z-index: 1000;
+  transition: width 0.35s ease, background 0.3s ease;
+}
+
+.sidebar.expanded {
+  width: 220px;
+  background-color: #f0f0f0;
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.18);
+}
+
+/* ===== HAMBURGER MENU ===== */
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #4338ca, #312e81);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+.hamburger div {
+  width: 22px;
+  height: 2.5px;
+  background: #fff;
+  border-radius: 3px;
+}
+
+/* ===== MENU LINKS ===== */
+.menu-links {
+  margin-top: 26px;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.3s ease, max-height 0.35s ease;
+}
+
+.menu-links.show {
+  opacity: 1;
+  max-height: 1000px;
+}
+
+/* ===== MENU ITEMS ===== */
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin-bottom: 6px;
+  color: rgba(0, 0, 0, 0.92);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.25s ease;
+  text-decoration: none;
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ===== MENU GROUP / SUBMENU ===== */
+.menu-group {
+  margin-bottom: 4px;
+}
+
+.submenu {
+  max-height: 0;
+  opacity: 0;
+}
+
+.submenu.open {
+  max-height: 400px;
+  opacity: 1;
+}
+
+
+.submenu a {
+  display: block;
+  padding: 8px 14px;
+  margin: 4px 0;
+  font-size: 13px;
+  color: rgba(39, 0, 61, 0.85);
+  text-decoration: none;
+  border-radius: 10px;
+  transition: background 0.25s ease;
+}
+
+.submenu a:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Logout emphasis */
+.menu-item.logout {
+  color: #fecaca;
+}
+
+/* ===== FORM CONTAINER ===== */
+.container{
+  max-width:500px;
+  margin:60px auto;
+  background:#fff;
+  padding:30px;
+  border-radius:12px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+}
+
+/* ===== FORM STYLES ===== */
+h2{
+  text-align:center;
+  margin-bottom:25px;
+  color:#1e3a8a;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  margin-bottom:15px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  font-size:14px;
+  outline:none;
+}
+
+input:focus{
+  border-color:#1e40af;
+}
+
+button{
+  width:100%;
+  padding:13px;
+  background:#1e40af;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  font-size:15px;
+  cursor:pointer;
+  transition:.3s;
+}
+
+button:hover{
+  background:#1d4ed8;
+}
+
+.success{
+  background:#e6fffa;
+  color:#065f46;
+  padding:10px;
+  border-radius:6px;
+  text-align:center;
+  margin-top:10px;
+}
+
+.error{
+  background:#fee2e2;
+  color:#991b1b;
+  padding:10px;
+  border-radius:6px;
+  text-align:center;
+  margin-top:10px;
+}
+
+.balance-box{
+  background:#f1f5f9;
+  padding:12px;
+  border-radius:8px;
+  margin-bottom:15px;
+  font-size:14px;
+}
+
+/* ===== MOBILE MODE ===== */
+@media(max-width:768px){
+
+  
+  /* Content no longer shifts */
+  .main-content{
+    margin-left:0;
+    padding:15px;
+  }
+
+  /* Prevent container from hiding under header */
+  .container{
+    margin:90px auto 20px auto;
+    width:94%;
+    padding:22px;
+  }
+}
+
+
+
+</style>
+</head>
+
+<body>
+  <body>
+
+    <!-- ===== SIDEBAR ===== -->
+    <div class="sidebar">
+
+      <div class="hamburger" onclick="toggleSidebar()">
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+    
+      <nav class="menu-links" id="menuLinks">
+    
+       
+        <a href="dashboard.html" class="menu-item">Dashboard</a>
+  
+        <!-- Transfers -->
+        <div class="menu-group">
+          <span class="menu-item">Transfers</span>
+          <div class="submenu">
+            <a href="Domestic Transfer.html">Domestic Transfer</a>
+         
+            <a href="Transfer to Self.html">Transfer to Self</a>
+            <a href="Transfer to TMB.html">Transfer to TMB</a>
+          </div>
+        </div>
+    <!--Recipt-->
+    
+  
+        
+    
+        
+        
+        
+        <a href="receipt.html" class="menu-item">receipts</a>
+        <a href="#" class="menu-item">Settings</a>
+        <a href="#" class="menu-item logout" onclick="logout()">Logout</a>
+    
+      </nav>
+    </div>
+      </nav>
+    
+    </div>
+    
+    
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main-content">
+    
+      <div class="container">
+        <h2>Domestic Transfer</h2>
+    
+        <div class="balance-box">
+          Current Balance: <strong id="currentBalance">$0</strong>
+        </div>
+    
+        <input type="text" id="receiverName" placeholder="Receiver Name">
+        <input type="text" id="bankName" placeholder="Bank Name">
+        <input type="text" id="accountNumber" placeholder="Account Number">
+        <input type="number" id="amount" placeholder="Amount">
+        <input type="password" id="pin" placeholder="Transaction PIN">
+    
+        <button onclick="sendTransfer()">Send Money</button>
+    
+        <div id="message"></div>
+      </div>
+    
+    </main>
+    
+    </body>
+    
+
+
+    <script type="module">
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+      import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        getDoc,
+        collection,
+        runTransaction,
+        serverTimestamp,
+        query,
+        where,
+        getDocs
+      } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+      
+      /* ===== FIREBASE CONFIG ===== */
+      const firebaseConfig = {
+        apiKey: "AIzaSyB_ssiJh411JD3uX6SXwBTT3wIT5nZ6iOk",
+        authDomain: "truemark-bank.firebaseapp.com",
+        projectId: "truemark-bank",
+        storageBucket: "truemark-bank.firebasestorage.app",
+        messagingSenderId: "135459481471",
+        appId: "1:135459481471:web:21b487301aaac729eddc4a"
+      };
+      
+      /* ===== INIT ===== */
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      
+      /* ===== LOAD BALANCE ===== */
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) return;
+      
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (!snap.exists()) return;
+      
+        const balance = snap.data().balances?.current || 0;
+        document.getElementById("currentBalance").innerText =
+          "$" + Number(balance).toLocaleString();
+      });
+      
+      /* ===== RECEIPT NUMBER ===== */
+      function generateReceiptNumber() {
+        return "RCPT-" + Date.now() + "-" + Math.floor(Math.random() * 900 + 100);
+      }
+      
+      /* ===== TRANSFER ===== */
+      let sending = false;
+      
+      window.sendTransfer = async function () {
+      
+        if (sending) return;
+        sending = true;
+      
+        const message = document.getElementById("message");
+        message.innerHTML = "<div class='success'>Processing...</div>";
+      
+        try {
+      
+          const user = auth.currentUser;
+          if (!user) throw "Please login first";
+      
+          const receiverName = document.getElementById("receiverName").value.trim();
+          const bankName = document.getElementById("bankName").value.trim();
+          const accountNumber = document.getElementById("accountNumber").value.trim();
+          const amount = Number(document.getElementById("amount").value);
+          const pin = document.getElementById("pin").value.trim();
+      
+          if (!receiverName || !bankName || !accountNumber || !pin || !amount || amount <= 0)
+            throw "All fields are required";
+      
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+      
+          if (!userSnap.exists()) throw "User not found";
+      
+          const userData = userSnap.data();
+      
+          if (userData.pin !== pin) throw "Incorrect PIN";
+          if (amount > (userData.balances?.current || 0)) throw "Insufficient funds";
+      
+          const receiptNo = generateReceiptNumber();
+      
+          /* ===== FIRESTORE TRANSACTION ===== */
+          await runTransaction(db, async (t) => {
+      
+            const freshSnap = await t.get(userRef);
+            const currentBalance = freshSnap.data().balances.current || 0;
+      
+            if (amount > currentBalance) throw "Insufficient funds";
+      
+            t.update(userRef, { "balances.current": currentBalance - amount });
+      
+            const txRef = doc(collection(db, "transactions"));
+            t.set(txRef, {
+              uid: user.uid,
+              type: "Domestic Transfer",
+              receiverName,
+              bankName,
+              accountNumber,
+              amount,
+              status: "Successful",
+              receiptNumber: receiptNo,
+              createdAt: serverTimestamp()
+            });
+          });
+      
+          /* ===== WAIT UNTIL TIMESTAMP EXISTS ===== */
+          let attempts = 0;
+          while (attempts < 10) {
+      
+            const q = query(collection(db, "transactions"), where("receiptNumber", "==", receiptNo));
+            const res = await getDocs(q);
+      
+            if (!res.empty && res.docs[0].data().createdAt) break;
+      
+            await new Promise(r => setTimeout(r, 500));
+            attempts++;
+          }
+      
+          message.innerHTML = "<div class='success'>Transfer Successful 🎉</div>";
+      
+          setTimeout(() => {
+            window.location.href = "receipt.html?receipt=" + receiptNo;
+          }, 1200);
+      
+        } catch (err) {
+          message.innerHTML = "<div class='error'>" + err + "</div>";
+        }
+      
+        sending = false;
+      };
+      
+   // ================= GLOBAL UI FUNCTIONS =================
+   document.addEventListener("DOMContentLoaded", () => {
+
+window.toggleSidebar = function () {
+  document.querySelector(".sidebar")?.classList.toggle("expanded");
+  document.getElementById("menuLinks")?.classList.toggle("show");
+};
+
+window.toggleProfile = function () {
+  const menu = document.getElementById("profileMenu");
+  if (!menu) return;
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+};
+
+window.logout = function () {
+  auth.signOut().then(() => {
+    window.location.replace("signin.html");
+  });
+};
+
+document.querySelectorAll(".menu-group > .menu-item").forEach(menu => {
+  menu.addEventListener("click", () => {
+    const submenu = menu.nextElementSibling;
+    if (!submenu) return;
+
+    document.querySelectorAll(".submenu").forEach(sm => {
+      if (sm !== submenu) sm.classList.remove("open");
+    });
+
+    submenu.classList.toggle("open");
+  });
+});
+
+});
+
+      </script>
+      
+
+</body>
+</html>
